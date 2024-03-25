@@ -1,0 +1,13 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+#Database
+reddit.db
+
+# Environments
+.env
+.envrc
+.venv
+
+# PyCharm
+.idea/
