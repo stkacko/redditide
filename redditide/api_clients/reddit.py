@@ -11,6 +11,11 @@ class Post:
     title: str
     permalink: str
     created: datetime
+    author: str  # TODO: get user avatar in front of username and add link https://www.reddit.com/user/DigitalSplendid/about.json
+    selftext: str
+    link_flair_text: str | None
+    # url_overridden_by_dest: str  # if url then insert into post
+    url: str
 
 
 class RedditClient:
@@ -66,6 +71,11 @@ class RedditClient:
                     title=post["data"]["title"],
                     permalink=post["data"]["permalink"],
                     created=datetime.fromtimestamp(post["data"]["created"]),
+                    author=post["data"]["author"],
+                    selftext=post["data"]["selftext"],
+                    link_flair_text=post["data"]["link_flair_text"],
+                    # url_overridden_by_dest=post["data"].get("url_overridden_by_dest"),
+                    url=post["data"]["url"],
                 )
 
                 # this is the first time the subreddit is scraped, there's no reference
