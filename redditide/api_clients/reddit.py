@@ -8,6 +8,7 @@ import os
 @dataclass
 class Post:
     id: str
+    subreddit: str
     title: str
     permalink: str
     created: datetime
@@ -63,6 +64,7 @@ class RedditClient:
             for post in posts:
                 postobj = Post(
                     id=post["data"]["name"],
+                    subreddit=name,
                     title=post["data"]["title"],
                     permalink=post["data"]["permalink"],
                     created=datetime.fromtimestamp(post["data"]["created"]),

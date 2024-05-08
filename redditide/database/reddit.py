@@ -1,45 +1,63 @@
-import sqlite3
-
-from redditide.api_clients.reddit import Post
+from prisma import Prisma
+from prisma.models import Post
 
 
 class RedditDatabase:
-    def __init__(self, db_name: str, table_name: str) -> None:
-        self.conn = sqlite3.connect(db_name)
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
-        self._create_table(table_name)
+    def __init__(self) -> None:
+        self.db = Prisma()
 
-    def _create_table(self, table_name: str) -> None:
-        sanitized_table_name = table_name.replace("'", "''")
-        self.cursor.execute(
-            f"""CREATE TABLE IF NOT EXISTS {sanitized_table_name}
-                                   (id TEXT, title TEXT, permalink TEXT, created INTEGER)"""
+    async def insert_post(self, post: Post) -> None:
+        if not self.db.is_connected():
+            await self.db.connect()
+
+        await self.db.post.create(
+            {
+                "id": post.id,
+                "subreddit": post.subreddit,
+                "title": post.title,
+                "permalink": post.permalink,
+                "created": post.created,
+            },
         )
-        self.conn.commit()
 
-    def insert_post(self, table_name: str, post: Post) -> None:
-        sanitized_table_name = table_name.replace("'", "''")
-        self.cursor.execute(
-            f"INSERT INTO {sanitized_table_name} (id, title, permalink, created) VALUES (?, ?, ?, ?)",
-            (post.id, post.title, post.permalink, post.created),
+    # create_many is not available for SQLite
+    async def insert_posts(self, posts: list[Post]) -> None:
+        if not self.db.is_connected():
+            await self.db.connect()
+
+        await self.db.post.create_many(
+            [
+                {
+                    "id": post.id,
+                    "subreddit": post.subreddit,
+                    "title": post.title,
+                    "permalink": post.permalink,
+                    "created": post.created,
+                }
+                for post in posts
+            ]
         )
-        self.conn.commit()
 
-    def retrieve_latest_post(self, table_name: str, offset: int = 0) -> Post | None:
-        sanitized_table_name = table_name.replace("'", "''")
-        self.cursor.execute(
-            f"SELECT * FROM {sanitized_table_name} ORDER BY created DESC LIMIT 1 OFFSET {offset}"
+    async def retrieve_latest_post(
+        self, subreddit: str, offset: int = 0
+    ) -> Post | None:
+        if not self.db.is_connected():
+            await self.db.connect()
+
+        post = await self.db.post.find_first(
+            skip=offset, order={"created": "desc"}, where={"subreddit": subreddit}
         )
-        result = self.cursor.fetchone()
-        if result:
-            return Post(
-                id=result["id"],
-                title=result["title"],
-                permalink=result["permalink"],
-                created=result["created"],
-            )
-        return None
 
-    def close(self) -> None:
-        self.conn.close()
+        if post is None:
+            return None
+
+        return Post(
+            id=post.id,
+            subreddit=post.subreddit,
+            title=post.title,
+            permalink=post.permalink,
+            created=post.created,
+        )
+
+    async def close(self) -> None:
+        await self.db.disconnect()
